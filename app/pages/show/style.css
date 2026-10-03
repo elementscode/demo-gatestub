@@ -1,0 +1,91 @@
+@import "#app/shared/styles/page.css";
+@import "#app/shared/styles/shows.css";
+
+.show-page {
+  display: grid;
+  grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+  gap: var(--space-10);
+  align-items: start;
+}
+
+.show-page .poster {
+  position: sticky;
+  top: var(--space-6);
+}
+
+.show-page h1 {
+  margin: 0;
+  font-size: clamp(var(--text-3xl), 5vw, var(--text-5xl));
+  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+}
+
+.show-meta {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.buy .card-body {
+  padding: 0;
+}
+
+.tier {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.tier-name {
+  font-weight: var(--weight-semibold);
+}
+
+.tier-price {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+.stepper {
+  gap: var(--space-2);
+}
+
+.stepper button {
+  width: 2.5rem;
+  padding-inline: 0;
+  font-size: var(--text-lg);
+}
+
+.stepper output {
+  min-width: 1.75rem;
+  text-align: center;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.buyer {
+  padding: var(--space-5);
+}
+
+.total {
+  justify-content: space-between;
+  font-size: var(--text-lg);
+}
+
+.total strong {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 48rem) {
+  .show-page {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  .show-page .poster {
+    position: static;
+    max-width: 16rem;
+  }
+}

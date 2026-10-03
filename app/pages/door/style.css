@@ -1,0 +1,245 @@
+@import "#app/shared/styles/page.css";
+
+.door {
+  padding-top: 0;
+}
+
+.door-head {
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--space-4);
+}
+
+.door-head h1 {
+  margin: 0;
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+}
+
+.door-head select {
+  max-width: 14rem;
+}
+
+@media (max-width: 40rem) {
+  .door-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .door-head select {
+    max-width: none;
+  }
+
+  .count-in {
+    font-size: var(--text-4xl);
+  }
+}
+
+.count {
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+}
+
+.count-main {
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.count-in {
+  font-size: var(--text-5xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-none);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.count-of {
+  font-size: var(--text-lg);
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.count-bar {
+  height: 0.6rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-muted);
+  overflow: hidden;
+}
+
+.count-bar span {
+  display: block;
+  height: 100%;
+  background: var(--success);
+  border-radius: inherit;
+  transition: width 400ms ease;
+}
+
+.count-types {
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.mode button.is-active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+.viewfinder {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  background: #0b0b0e;
+  overflow: hidden;
+}
+
+.viewfinder video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.viewfinder-frame {
+  position: absolute;
+  inset: 18%;
+  border: 3px solid rgb(255 255 255 / 0.85);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.35);
+  pointer-events: none;
+}
+
+.viewfinder-idle {
+  position: absolute;
+  inset: 0;
+  padding: var(--space-6);
+  text-align: center;
+  color: #e4e4e7;
+}
+
+.viewfinder-idle p {
+  margin: 0;
+  color: #a1a1aa;
+}
+
+.hits {
+  margin: 0;
+  padding: 0;
+}
+
+.hit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.hit-name {
+  font-weight: var(--weight-semibold);
+}
+
+.hit-meta {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.hit-code {
+  font-family: var(--font-mono);
+}
+
+.verdict {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  color: #fff;
+  cursor: pointer;
+  animation: verdict-in 160ms ease-out;
+}
+
+.verdict.is-valid {
+  background: #0f9d58;
+}
+
+.verdict.is-already {
+  background: #d97706;
+}
+
+.verdict.is-notfound,
+.verdict.is-wrongshow {
+  background: #dc2626;
+}
+
+.verdict svg {
+  flex: none;
+}
+
+.verdict-word {
+  margin: 0;
+  font-size: clamp(3rem, 15vw, 6.5rem);
+  font-weight: var(--weight-black);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+.verdict-name {
+  margin: 0;
+  font-size: clamp(var(--text-2xl), 7vw, var(--text-4xl));
+  font-weight: var(--weight-bold);
+}
+
+.verdict-detail {
+  margin: 0;
+  font-size: var(--text-lg);
+  opacity: 0.92;
+}
+
+.verdict-actions {
+  margin-top: var(--space-4);
+  justify-content: center;
+}
+
+.verdict-actions button {
+  background: rgb(255 255 255 / 0.18);
+  border-color: rgb(255 255 255 / 0.5);
+  color: #fff;
+}
+
+.verdict-hint {
+  position: absolute;
+  bottom: var(--space-6);
+  margin: 0;
+  font-size: var(--text-sm);
+  opacity: 0.8;
+}
+
+@keyframes verdict-in {
+  from {
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verdict {
+    animation: none;
+  }
+}

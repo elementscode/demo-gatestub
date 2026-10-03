@@ -1,0 +1,42 @@
+@import "#app/shared/styles/page.css";
+@import "#app/shared/styles/admin.css";
+
+.show-summary {
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.show-summary img {
+  width: 6rem;
+  height: 9rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  flex: none;
+}
+
+.show-summary h1 {
+  margin: 0;
+}
+
+.show-summary p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.add-type {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+@media (max-width: 40rem) {
+  .add-type {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .add-type .field:first-child {
+    grid-column: 1 / -1;
+  }
+}
