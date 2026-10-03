@@ -1,0 +1,177 @@
+import "./style.css";
+import config from "#config";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { LiveView, redirect, ValidationError } from "@elements/app";
+import type { FieldErrors } from "@elements/app";
+import { Layout } from "#app/shared/templates/layout";
+import { Show, TicketType, posterUrl, remaining, leftLabel, leftClass } from "#app/shared/services/shows";
+import { OrderForm, MAX_PER_ORDER, startOrder } from "#app/shared/checkout";
+import { money, longDay, time } from "#app/shared/format";
+
+/** @rpc */
+export async function buy(form: OrderForm): Promise<string> {
+  return await startOrder(form);
+}
+
+interface BuyForm extends OrderForm {
+  errors: FieldErrors<OrderForm>;
+  message: string;
+  busy: boolean;
+}
+
+export function totalCents(form: BuyForm, types: Iterable<TicketType>): number {
+  let sum = 0;
+
+  for (let t of types) {
+    sum += (form.quantities[t.id] ?? 0) * t.priceCents;
+  }
+
+  return sum;
+}
+
+export function ticketCount(form: BuyForm): number {
+  return Object.values(form.quantities).reduce((sum, n) => sum + n, 0);
+}
+
+function onStep(form: BuyForm, t: TicketType, by: number) {
+  let current = form.quantities[t.id] ?? 0;
+  let room = MAX_PER_ORDER - ticketCount(form) + current;
+  form.quantities[t.id] = Math.max(0, Math.min(current + by, remaining(t), room));
+  form.errors = {};
+}
+
+async function onSubmit(form: BuyForm) {
+  form.errors = {};
+  form.message = "";
+  form.busy = true;
+
+  try {
+    let url = await buy({ showId: form.showId, name: form.name, email: form.email, quantities: form.quantities });
+    redirect(url);
+  } catch (err: any) {
+    form.busy = false;
+
+    if (err instanceof ValidationError && err.errors) {
+      form.errors = err.errors;
+    } else {
+      form.message = err.message;
+    }
+  }
+}
+
+<html lang="en" class="page-show" (
+  show: Show,
+  types: LiveView<TicketType>,
+  canceled: boolean,
+  private form: BuyForm = {
+    showId: show.id,
+    name: "",
+    email: "",
+    quantities: Object.fromEntries(types.map((t) => [t.id, 0])),
+    errors: {},
+    message: "",
+    busy: false,
+  },
+)>
+  <head>
+    <title>{show.title} · {config.venue.name}</title>
+    <meta name="description" content={`${show.title} ${show.support} at ${config.venue.name}, ${longDay(show.startsAt)}.`}>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout>
+      <div class="page-shell show-page">
+        <img class="poster" src={posterUrl(show)} alt={`${show.title} poster`} width="400" height="600">
+
+        <div class="stack is-lg">
+          <div class="stack is-sm">
+            <span class="show-date">{longDay(show.startsAt)}</span>
+            <h1>{show.title}</h1>
+            <p class="show-meta">{show.support}</p>
+            <p class="show-meta">Doors {time(show.doorsAt)} · Show {time(show.startsAt)} · All ages</p>
+          </div>
+
+          <p e:if={show.description}>{show.description}</p>
+
+          <div e:if={canceled} class="callout is-warning">
+            <div class="callout-body">Checkout canceled. Nothing was charged, and your tickets went back on sale.</div>
+          </div>
+
+          <form class="card buy" onsubmit={() => onSubmit(form)}>
+            <div class="card-head">
+              <h2>Tickets</h2>
+            </div>
+
+            <div class="card-body">
+              <div e:for={t of types.sort((a, b) => a.position - b.position)} class="tier">
+                <div class="stack is-xs">
+                  <span class="tier-name">{t.name}</span>
+                  <span class="row gap-3">
+                    <span class="tier-price">{money(t.priceCents)}</span>
+                    <span class={leftClass(t)}>{leftLabel(t)}</span>
+                  </span>
+                </div>
+
+                <div class="stepper row">
+                  <button type="button"
+                          aria-label={`One fewer ${t.name}`}
+                          disabled={(form.quantities[t.id] ?? 0) === 0}
+                          onclick={() => onStep(form, t, -1)}>−</button>
+                  <output aria-live="polite">{form.quantities[t.id] ?? 0}</output>
+                  <button type="button"
+                          aria-label={`One more ${t.name}`}
+                          disabled={(form.quantities[t.id] ?? 0) >= remaining(t) || ticketCount(form) >= MAX_PER_ORDER}
+                          onclick={() => onStep(form, t, 1)}>+</button>
+                </div>
+              </div>
+
+              <div class="buyer stack">
+                <p e:if={form.errors.quantities} class="error" role="alert">{form.errors.quantities?.[0]}</p>
+
+                <div class="field">
+                  <label for="name">Name for the door</label>
+                  <input id="name"
+                         name="name"
+                         value={form.name}
+                         autocomplete="name"
+                         class={[form.errors.name && "is-error"]}
+                         placeholder="Ada Lovelace">
+                  <p e:if={form.errors.name} class="error">{form.errors.name?.[0]}</p>
+                </div>
+
+                <div class="field">
+                  <label for="email">Email for your tickets</label>
+                  <input id="email"
+                         name="email"
+                         type="email"
+                         value={form.email}
+                         autocomplete="email"
+                         autocapitalize="none"
+                         spellcheck={false}
+                         class={[form.errors.email && "is-error"]}
+                         placeholder="ada@example.com">
+                  <p e:if={form.errors.email} class="error">{form.errors.email?.[0]}</p>
+                </div>
+
+                <div class="total row">
+                  <span>Total</span>
+                  <strong>{money(totalCents(form, types))}</strong>
+                </div>
+
+                <p e:if={form.message} class="error" role="alert">{form.message}</p>
+
+                <button type="submit"
+                        class={["is-primary is-lg is-block", form.busy && "is-loading"]}
+                        disabled={form.busy || ticketCount(form) === 0}>
+                  {ticketCount(form) === 0 ? "Choose tickets" : `Pay ${money(totalCents(form, types))}`}
+                </button>
+
+                <p class="hint">Card payment by Stripe. No account needed: your tickets arrive by email, one QR code per ticket.</p>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Layout>
+  </body>
+</html>

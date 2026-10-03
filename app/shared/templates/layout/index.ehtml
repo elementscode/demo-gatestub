@@ -1,0 +1,42 @@
+import "./style.css";
+import config from "#config";
+import { redirect, session } from "@elements/app";
+import { signout } from "#app/shared/services/auth";
+
+function onSignout() {
+  signout();
+  redirect("/signin");
+}
+
+<Layout (section: "public" | "admin" | "door" = "public", width: string = "")>
+  <div class="app">
+    <header class="site-header">
+      <div class={["page-shell site-header-inner row", width]}>
+        <a href="/" class="site-brand row">
+          <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a3 3 0 0 0 0 6v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a3 3 0 0 0 0-6z"/>
+            <path stroke="var(--bg)" stroke-width="1.6" stroke-dasharray="2 2" d="M15 5v14"/>
+          </svg>
+          <span>{config.venue.name}</span>
+          <span class="site-brand-sub">tickets</span>
+        </a>
+
+        <nav class="site-nav cluster is-md">
+          <a href="/" class={[section === "public" && "is-active", session.isLoggedIn() && "is-staff"]}>Shows</a>
+          <a e:if={session.isLoggedIn()} href="/door" class={[section === "door" && "is-active"]}>Door</a>
+          <a e:if={session.get("role") === "admin"} href="/admin" class={[section === "admin" && "is-active"]}>Admin</a>
+          <button e:if={session.isLoggedIn()} class="is-ghost is-sm" onclick={() => onSignout()}>Sign out</button>
+          <a e:else href="/signin">Staff</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="app-main site-main">
+      <slot/>
+    </main>
+
+    <footer class="site-footer">
+      <div class={["page-shell", width]}>{config.venue.name} · {config.venue.address}</div>
+    </footer>
+  </div>
+</Layout>

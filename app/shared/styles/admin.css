@@ -1,0 +1,97 @@
+.admin-head {
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.admin-head h1 {
+  margin: 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-4);
+}
+
+.stat {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--bg-soft);
+}
+
+.stat-label {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.stat-value {
+  margin: 0;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-sub {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.meter-bar {
+  width: 6rem;
+  height: 0.4rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-muted);
+  overflow: hidden;
+}
+
+.meter-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.thumb {
+  width: 2.5rem;
+  height: 3.75rem;
+  object-fit: cover;
+  border-radius: var(--radius-xs);
+  flex: none;
+}
+
+td.show-cell a {
+  gap: var(--space-3);
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: var(--weight-semibold);
+}
+
+td.show-cell a:hover span {
+  text-decoration: underline;
+}
+
+.table-wrap td {
+  vertical-align: middle;
+}
+
+.num input {
+  display: block;
+  margin-left: auto;
+  text-align: right;
+}
