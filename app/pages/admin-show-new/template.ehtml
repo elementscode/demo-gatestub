@@ -1,0 +1,174 @@
+import "./style.css";
+import config from "#config";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { File, redirect, ValidationError } from "@elements/app";
+import type { FieldErrors } from "@elements/app";
+import { Layout } from "#app/shared/templates/layout";
+import { ShowForm, createShow } from "./services";
+import type { TypeForm } from "#app/pages/admin-show/services";
+
+interface NewShow {
+  form: ShowForm;
+  errors: FieldErrors<ShowForm>;
+  message: string;
+  busy: boolean;
+}
+
+let rows = 0;
+
+function blank(): NewShow {
+  return {
+    form: {
+      title: "",
+      support: "",
+      description: "",
+      date: "",
+      doors: "19:00",
+      starts: "20:00",
+      poster: null,
+      types: [
+        { id: "row-ga", name: "General admission", price: "20", quantity: "220" },
+        { id: "row-balcony", name: "Balcony", price: "30", quantity: "60" },
+      ],
+    },
+    errors: {},
+    message: "",
+    busy: false,
+  };
+}
+
+function onAddRow(state: NewShow) {
+  state.form.types.push({ id: `row-${++rows}`, name: "", price: "", quantity: "" });
+}
+
+function onRemoveRow(state: NewShow, row: TypeForm) {
+  state.form.types = state.form.types.filter((t) => t.id !== row.id);
+}
+
+function onSubmit(state: NewShow) {
+  state.errors = {};
+  state.message = "";
+  state.busy = true;
+
+  try {
+    let id = createShow(state.form);
+    redirect(`/admin/shows/${id}?created=1`);
+  } catch (err: any) {
+    state.busy = false;
+
+    if (err instanceof ValidationError && err.errors) {
+      state.errors = err.errors;
+    } else {
+      state.message = err.message;
+    }
+  }
+}
+
+function previewUrl(poster: File | null): string {
+  if (!poster || !poster.data || typeof URL === "undefined") {
+    return "";
+  }
+
+  return URL.createObjectURL(new Blob([poster.data as BlobPart], { type: poster.contentType }));
+}
+
+<html lang="en" class="page-admin-show-new" (private state: NewShow = blank())>
+  <head>
+    <title>New show · Admin · {config.venue.name}</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout section="admin">
+      <div class="page-shell is-form new-show stack is-lg">
+        <a href="/admin">← All shows</a>
+        <h1>New show</h1>
+
+        <form class="stack is-lg" onsubmit={() => onSubmit(state)}>
+          <div class="card">
+            <div class="card-body stack">
+              <div class="field">
+                <label for="title">Headliner</label>
+                <input id="title" value={state.form.title} placeholder="Mercury Fuzz Choir" class={[state.errors.title && "is-error"]}>
+                <p e:if={state.errors.title} class="error">{state.errors.title?.[0]}</p>
+              </div>
+
+              <div class="field">
+                <label for="support">Support</label>
+                <input id="support" value={state.form.support} placeholder="with Lowercase Saints">
+              </div>
+
+              <div class="field">
+                <label for="description">Description</label>
+                <textarea id="description" value={state.form.description} placeholder="One or two lines for the show page."></textarea>
+              </div>
+
+              <div class="type-row" style="grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr)">
+                <div class="field">
+                  <label for="date">Date</label>
+                  <input id="date" type="date" value={state.form.date} class={[state.errors.date && "is-error"]}>
+                </div>
+                <div class="field">
+                  <label for="doors">Doors</label>
+                  <input id="doors" type="time" value={state.form.doors} class={[state.errors.doors && "is-error"]}>
+                </div>
+                <div class="field">
+                  <label for="starts">Show</label>
+                  <input id="starts" type="time" value={state.form.starts} class={[state.errors.starts && "is-error"]}>
+                </div>
+              </div>
+              <p e:if={state.errors.date || state.errors.doors || state.errors.starts} class="error">
+                {(state.errors.date ?? state.errors.doors ?? state.errors.starts)?.[0]}
+              </p>
+              <p class="hint">Times are {config.venue.name} local time ({config.venue.timezone}).</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h2>Poster</h2>
+            </div>
+            <div class="card-body row is-start gap-4">
+              <img e:if={state.form.poster} class="poster-preview" src={previewUrl(state.form.poster)} alt="Poster preview" width="128" height="192">
+              <div class="field">
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" value={state.form.poster} aria-label="Poster image">
+                <p class="hint">Portrait, 2:3 works best. PNG, JPEG, WebP or GIF under 4 MB.</p>
+                <p e:if={state.errors.poster} class="error">{state.errors.poster?.[0]}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h2>Ticket types</h2>
+            </div>
+            <div class="card-body stack">
+              <div class="type-row type-labels">
+                <span>Name</span>
+                <span>Price ($)</span>
+                <span>Quantity</span>
+                <span></span>
+              </div>
+              <div e:for={t of state.form.types} class="type-row">
+                <input value={t.name} aria-label="Ticket type name" placeholder="General admission">
+                <input value={t.price} aria-label="Price in dollars" inputmode="decimal" placeholder="20">
+                <input value={t.quantity} aria-label="Quantity" inputmode="numeric" placeholder="200">
+                <button type="button" class="is-ghost is-sm" aria-label="Remove ticket type" onclick={() => onRemoveRow(state, t)}>✕</button>
+              </div>
+              <p e:if={state.errors.types} class="error">{state.errors.types?.[0]}</p>
+              <div>
+                <button type="button" class="is-sm" onclick={() => onAddRow(state)}>Add ticket type</button>
+              </div>
+            </div>
+          </div>
+
+          <p e:if={state.message} class="error" role="alert">{state.message}</p>
+
+          <div class="cluster">
+            <button type="submit" class={["is-primary is-lg", state.busy && "is-loading"]} disabled={state.busy}>Create show and put on sale</button>
+            <a href="/admin" class="button is-ghost is-lg">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </Layout>
+  </body>
+</html>

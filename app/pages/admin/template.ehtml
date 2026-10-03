@@ -1,0 +1,126 @@
+import "./style.css";
+import config from "#config";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { LiveView } from "@elements/app";
+import { Layout } from "#app/shared/templates/layout";
+import { Show, TicketType, posterUrl, typesFor, sales } from "#app/shared/services/shows";
+import { money, day, when, time } from "#app/shared/format";
+
+export interface PastShow {
+  id: string;
+  title: string;
+  startsAt: Date;
+  sold: number;
+  capacity: number;
+  checkedIn: number;
+  revenue: number;
+}
+
+function pct(n: number, of: number): string {
+  return `${of === 0 ? 0 : Math.round((n / of) * 100)}%`;
+}
+
+<html lang="en" class="page-admin" (shows: Show[], types: LiveView<TicketType>, past: PastShow[])>
+  <head>
+    <title>Admin · {config.venue.name}</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout section="admin" width="is-wide">
+      <div class="page-shell is-wide stack is-xl">
+        <div class="admin-head row">
+          <div class="stack is-xs">
+            <p class="eyebrow">Admin</p>
+            <h1>Sales</h1>
+          </div>
+          <div class="cluster">
+            <a href="/admin/shows/new" class="button is-primary">New show</a>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <p class="stat-label">Upcoming tickets sold</p>
+            <p class="stat-value">{sales([...types]).sold.toLocaleString("en-US")}</p>
+            <p class="stat-sub">of {sales([...types]).capacity.toLocaleString("en-US")} across {shows.length} shows</p>
+          </div>
+          <div class="stat">
+            <p class="stat-label">Upcoming revenue</p>
+            <p class="stat-value">{money(sales([...types]).revenue)}</p>
+            <p class="stat-sub">at face value</p>
+          </div>
+          <div e:if={shows.length > 0} class="stat">
+            <p class="stat-label">{when(shows[0].startsAt)}: {shows[0].title}</p>
+            <p class="stat-value">{sales(typesFor(types, shows[0].id)).checkedIn} in</p>
+            <p class="stat-sub">of {sales(typesFor(types, shows[0].id)).sold} sold · doors {time(shows[0].doorsAt)}</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Upcoming shows</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Show</th>
+                  <th>Date</th>
+                  <th class="num">Sold</th>
+                  <th></th>
+                  <th class="num">Revenue</th>
+                  <th class="num">Checked in</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr e:for={show of shows}>
+                  <td class="show-cell">
+                    <a href={`/admin/shows/${show.id}`} class="row">
+                      <img class="thumb" src={posterUrl(show)} alt="" width="40" height="60">
+                      <span>{show.title}</span>
+                    </a>
+                  </td>
+                  <td>{when(show.startsAt)}</td>
+                  <td class="num">{sales(typesFor(types, show.id)).sold} / {sales(typesFor(types, show.id)).capacity}</td>
+                  <td>
+                    <div class="meter-bar"><span style={`width: ${pct(sales(typesFor(types, show.id)).sold, sales(typesFor(types, show.id)).capacity)}`}></span></div>
+                  </td>
+                  <td class="num">{money(sales(typesFor(types, show.id)).revenue)}</td>
+                  <td class="num">{sales(typesFor(types, show.id)).checkedIn}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div e:if={past.length > 0} class="card">
+          <div class="card-head">
+            <h2>Past shows</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Show</th>
+                  <th>Date</th>
+                  <th class="num">Sold</th>
+                  <th class="num">Revenue</th>
+                  <th class="num">Attended</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr e:for={p of past}>
+                  <td><a href={`/admin/shows/${p.id}`}>{p.title}</a></td>
+                  <td>{day(p.startsAt)}</td>
+                  <td class="num">{p.sold} / {p.capacity}</td>
+                  <td class="num">{money(p.revenue)}</td>
+                  <td class="num">{p.checkedIn}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  </body>
+</html>

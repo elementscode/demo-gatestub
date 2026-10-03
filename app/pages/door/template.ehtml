@@ -1,0 +1,494 @@
+import "./style.css";
+import config from "#config";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import jsQR from "jsqr";
+import { LiveView, redirect } from "@elements/app";
+import { Layout } from "#app/shared/templates/layout";
+import { Show, TicketType } from "#app/shared/services/shows";
+import { when, time, day } from "#app/shared/format";
+import { CheckInResult, TicketHit, checkInCode, checkInTicket, undoCheckIn, searchTickets } from "./services";
+
+interface ShowChoice {
+  id: string;
+  title: string;
+  startsAt: Date;
+}
+
+interface DoorState {
+  mode: "scan" | "search";
+  camera: "off" | "starting" | "on" | "error";
+  cameraError: string;
+  manual: string;
+  query: string;
+  hits: TicketHit[];
+  searched: string;
+  result: CheckInResult | null;
+  busy: boolean;
+}
+
+// Camera plumbing lives outside the reactive state: DOM nodes and streams are
+// not data the template renders.
+const cam = {
+  video: null as HTMLVideoElement | null,
+  canvas: null as HTMLCanvasElement | null,
+  stream: null as MediaStream | null,
+  detector: null as any,
+  frame: 0,
+  lastCode: "",
+  lastAt: 0,
+  dismissTimer: 0 as any,
+  audio: null as AudioContext | null,
+  searchSeq: 0,
+};
+
+const DISMISS_MS = { valid: 2200, already: 4500, notfound: 4500, wrongshow: 5000 };
+
+export function totals(types: Iterable<TicketType>): { sold: number; checkedIn: number } {
+  let sold = 0;
+  let checkedIn = 0;
+
+  for (let t of types) {
+    sold += t.sold;
+    checkedIn += t.checkedIn;
+  }
+
+  return { sold, checkedIn };
+}
+
+function percent(types: Iterable<TicketType>): string {
+  let { sold, checkedIn } = totals(types);
+
+  return `${sold === 0 ? 0 : Math.round((checkedIn / sold) * 100)}%`;
+}
+
+function tone(ok: boolean) {
+  navigator.vibrate?.(ok ? 80 : [120, 80, 120, 80, 220]);
+
+  let ctx = cam.audio;
+
+  if (!ctx) {
+    return;
+  }
+
+  let notes = ok ? [880, 1320] : [220, 180];
+  let start = ctx.currentTime;
+
+  notes.forEach((freq, i) => {
+    let osc = ctx!.createOscillator();
+    let gain = ctx!.createGain();
+    osc.type = ok ? "sine" : "square";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, start + i * 0.14);
+    gain.gain.exponentialRampToValueAtTime(ok ? 0.35 : 0.2, start + i * 0.14 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + i * 0.14 + 0.13);
+    osc.connect(gain).connect(ctx!.destination);
+    osc.start(start + i * 0.14);
+    osc.stop(start + i * 0.14 + 0.14);
+  });
+}
+
+function show(door: DoorState, r: CheckInResult) {
+  door.result = r;
+  tone(r.status === "valid");
+
+  clearTimeout(cam.dismissTimer);
+  cam.dismissTimer = setTimeout(() => onDismiss(door), DISMISS_MS[r.status]);
+
+  let hit = door.hits.find((h) => h.id === r.ticketId);
+
+  if (hit && (r.status === "valid" || r.status === "already")) {
+    hit.checkedInAt = r.checkedInAt;
+  }
+}
+
+function onDismiss(door: DoorState) {
+  clearTimeout(cam.dismissTimer);
+  door.result = null;
+}
+
+function onVerdictClick(door: DoorState, e: MouseEvent) {
+  if ((e.target as Element).closest("button")) {
+    return;
+  }
+
+  onDismiss(door);
+}
+
+function onUndo(door: DoorState, showId: string) {
+  let r = door.result;
+
+  if (!r) {
+    return;
+  }
+
+  undoCheckIn(showId, r.ticketId);
+
+  let hit = door.hits.find((h) => h.id === r!.ticketId);
+
+  if (hit) {
+    hit.checkedInAt = null;
+  }
+
+  onDismiss(door);
+}
+
+function admitCode(door: DoorState, showId: string, code: string) {
+  if (door.busy) {
+    return;
+  }
+
+  door.busy = true;
+
+  try {
+    show(door, checkInCode(showId, code));
+  } finally {
+    door.busy = false;
+  }
+}
+
+function onManualSubmit(door: DoorState, showId: string) {
+  if (!door.manual.trim()) {
+    return;
+  }
+
+  admitCode(door, showId, door.manual);
+  door.manual = "";
+}
+
+function onAdmitHit(door: DoorState, showId: string, hit: TicketHit) {
+  show(door, checkInTicket(showId, hit.id));
+}
+
+function onSearchInput(door: DoorState, showId: string) {
+  let q = door.query;
+  let seq = ++cam.searchSeq;
+
+  if (q.trim().length < 2) {
+    door.hits = [];
+    door.searched = "";
+    return;
+  }
+
+  let hits = searchTickets(showId, q);
+
+  // Typing outruns the network: only the newest search may paint.
+  if (seq === cam.searchSeq) {
+    door.hits = hits;
+    door.searched = q;
+  }
+}
+
+function onMode(door: DoorState, mode: "scan" | "search") {
+  door.mode = mode;
+
+  if (mode === "search") {
+    stopCamera(door);
+  }
+}
+
+function onVideoInsert(e: Event) {
+  cam.video = e.target as HTMLVideoElement;
+}
+
+function onVideoRemove(door: DoorState) {
+  stopCamera(door);
+  cam.video = null;
+}
+
+function stopCamera(door: DoorState) {
+  cancelAnimationFrame(cam.frame);
+  cam.stream?.getTracks().forEach((t) => t.stop());
+  cam.stream = null;
+
+  if (door.camera !== "error") {
+    door.camera = "off";
+  }
+}
+
+async function onStartCamera(door: DoorState, showId: string) {
+  // Sound needs a user gesture to start, and this tap is one.
+  cam.audio ??= new AudioContext();
+  cam.audio.resume();
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    door.camera = "error";
+    door.cameraError = "This browser can't open the camera here. The camera needs https. Search by name instead.";
+    return;
+  }
+
+  door.camera = "starting";
+  door.cameraError = "";
+
+  try {
+    cam.stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 1280 } },
+      audio: false,
+    });
+  } catch (err: any) {
+    door.camera = "error";
+    door.cameraError = err?.name === "NotAllowedError"
+      ? "Camera permission was denied. Allow it in the browser's site settings, or search by name."
+      : "No camera found. Search by name instead.";
+    return;
+  }
+
+  let video = cam.video;
+
+  if (!video) {
+    stopCamera(door);
+    return;
+  }
+
+  video.srcObject = cam.stream;
+  await video.play();
+  door.camera = "on";
+
+  let Detector = (globalThis as any).BarcodeDetector;
+
+  if (Detector && !cam.detector) {
+    try {
+      let formats: string[] = await Detector.getSupportedFormats();
+      cam.detector = formats.includes("qr_code") ? new Detector({ formats: ["qr_code"] }) : null;
+    } catch {
+      cam.detector = null;
+    }
+  }
+
+  scanLoop(door, showId);
+}
+
+async function readCode(video: HTMLVideoElement): Promise<string> {
+  if (cam.detector) {
+    let codes = await cam.detector.detect(video);
+
+    return codes[0]?.rawValue ?? "";
+  }
+
+  // jsQR on a downscaled center crop: plenty of pixels for a phone held a
+  // hand's width from the ticket, and fast enough for every frame.
+  let side = Math.min(video.videoWidth, video.videoHeight);
+  let size = 480;
+  cam.canvas ??= document.createElement("canvas");
+  cam.canvas.width = size;
+  cam.canvas.height = size;
+
+  let ctx = cam.canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(video, (video.videoWidth - side) / 2, (video.videoHeight - side) / 2, side, side, 0, 0, size, size);
+
+  let found = jsQR(ctx.getImageData(0, 0, size, size).data, size, size, { inversionAttempts: "dontInvert" });
+
+  return found?.data ?? "";
+}
+
+function scanLoop(door: DoorState, showId: string) {
+  let tick = async () => {
+    let video = cam.video;
+
+    if (!cam.stream || !video) {
+      return;
+    }
+
+    if (!door.result && !door.busy && video.readyState >= 2) {
+      let code = "";
+
+      try {
+        code = await readCode(video);
+      } catch {
+        code = "";
+      }
+
+      // Holding a ticket under the camera reads it every frame: once per few seconds.
+      let now = Date.now();
+      let repeat = code === cam.lastCode && now - cam.lastAt < 4000;
+
+      if (code && !repeat) {
+        cam.lastCode = code;
+        cam.lastAt = now;
+        admitCode(door, showId, code);
+      }
+    }
+
+    cam.frame = requestAnimationFrame(tick);
+  };
+
+  cam.frame = requestAnimationFrame(tick);
+}
+
+function newDoor(): DoorState {
+  return {
+    mode: "scan",
+    camera: "off",
+    cameraError: "",
+    manual: "",
+    query: "",
+    hits: [],
+    searched: "",
+    result: null,
+    busy: false,
+  };
+}
+
+function onShowChange(e: Event) {
+  redirect(`/door/${(e.target as HTMLSelectElement).value}`);
+}
+
+<html lang="en" data-theme="dark" class="page-door" (
+  show: Show,
+  shows: ShowChoice[],
+  types: LiveView<TicketType>,
+  private door: DoorState = newDoor(),
+)>
+  <head>
+    <title>Door · {show.title} · {config.venue.name}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0b0e">
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout section="door">
+      <div class="page-shell is-form door stack is-lg">
+        <div class="door-head row">
+          <div class="stack is-xs">
+            <span class="eyebrow">{when(show.startsAt)} · doors {time(show.doorsAt)}</span>
+            <h1>{show.title}</h1>
+          </div>
+
+          <select e:if={shows.length > 1} aria-label="Show" class="is-sm" onchange={onShowChange}>
+            <option e:for={s of shows} value={s.id} selected={s.id === show.id}>{day(s.startsAt)} · {s.title}</option>
+          </select>
+        </div>
+
+        <div class="count stack is-sm" aria-live="polite">
+          <div class="count-main row">
+            <span class="eyebrow">Checked in</span>
+            <span class="count-of">{percent(types)}</span>
+          </div>
+          <div class="row is-baseline gap-2">
+            <span class="count-in">{totals(types).checkedIn}</span>
+            <span class="count-of">of {totals(types).sold} sold</span>
+          </div>
+          <div class="count-bar"><span style={`width: ${percent(types)}`}></span></div>
+          <div class="count-types cluster">
+            <span e:for={t of types.sort((a, b) => a.position - b.position)}>{t.name} {t.checkedIn}/{t.sold}</span>
+          </div>
+        </div>
+
+        <div class="mode" role="tablist">
+          <button role="tab"
+                  aria-selected={door.mode === "scan"}
+                  class={["is-lg", door.mode === "scan" && "is-active"]}
+                  onclick={() => onMode(door, "scan")}>Scan</button>
+          <button role="tab"
+                  aria-selected={door.mode === "search"}
+                  class={["is-lg", door.mode === "search" && "is-active"]}
+                  onclick={() => onMode(door, "search")}>Search by name</button>
+        </div>
+
+        <div e:if={door.mode === "scan"} class="stack">
+          <div class="viewfinder">
+            <video playsinline muted autoplay oninsert={onVideoInsert} onremove={() => onVideoRemove(door)}></video>
+            <div e:if={door.camera === "on"} class="viewfinder-frame"></div>
+
+            <div e:if={door.camera !== "on"} class="viewfinder-idle center">
+              <div class="stack is-md">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                  <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/>
+                  <path d="M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 16h3"/>
+                </svg>
+                <p e:if={door.camera === "error"}>{door.cameraError}</p>
+                <p e:else>Point the camera at a ticket's QR code.</p>
+                <button class={["is-primary is-lg", door.camera === "starting" && "is-loading"]}
+                        disabled={door.camera === "starting"}
+                        onclick={() => onStartCamera(door, show.id)}>
+                  {door.camera === "error" ? "Try again" : "Start camera"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <form class="row" onsubmit={() => onManualSubmit(door, show.id)}>
+            <input value={door.manual}
+                   aria-label="Ticket code"
+                   placeholder="Or type the ticket code"
+                   autocapitalize="characters"
+                   autocomplete="off"
+                   spellcheck={false}
+                   class="font-mono">
+            <button type="submit" disabled={!door.manual.trim()}>Check</button>
+          </form>
+        </div>
+
+        <div e:else class="stack">
+          <input type="search"
+                 class="is-lg"
+                 value={door.query}
+                 oninput={() => onSearchInput(door, show.id)}
+                 aria-label="Search by name, email or code"
+                 placeholder="Name, email or code"
+                 autocomplete="off"
+                 spellcheck={false}
+                 focus={true}>
+
+          <p e:if={door.searched && door.hits.length === 0} class="hint">No tickets for this show match “{door.searched}”.</p>
+
+          <ul class="hits">
+            <li e:for={hit of door.hits} class="hit">
+              <div class="stack is-xs">
+                <span class="hit-name">{hit.holderName}</span>
+                <span class="hit-meta">{hit.typeName} · <span class="hit-code">{hit.code.slice(-6)}</span> · {hit.email}</span>
+              </div>
+              <span e:if={hit.checkedInAt} class="pill is-success">In {time(hit.checkedInAt!)}</span>
+              <button e:else class="is-primary" onclick={() => onAdmitHit(door, show.id, hit)}>Check in</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div e:if={door.result}
+           role="alert"
+           class={["verdict", `is-${door.result!.status}`]}
+           onclick={(e) => onVerdictClick(door, e)}>
+        <Verdict result={door.result!} />
+
+        <div class="verdict-actions cluster">
+          <button e:if={door.result!.status === "valid"} class="is-lg" onclick={() => onUndo(door, show.id)}>Undo</button>
+          <button class="is-lg" onclick={() => onDismiss(door)}>Next</button>
+        </div>
+
+        <p class="verdict-hint">Tap anywhere to continue</p>
+      </div>
+    </Layout>
+  </body>
+</html>
+
+<Verdict (result: CheckInResult)>
+  <div e:switch={result.status} class="stack is-md center">
+    <div e:case="valid" class="stack is-md center">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>
+      <p class="verdict-word">Valid</p>
+      <p class="verdict-name">{result.holderName}</p>
+      <p class="verdict-detail">{result.typeName}</p>
+      <p e:if={result.orderWaiting > 0} class="verdict-detail">{result.orderWaiting} more on this order still to come in</p>
+    </div>
+
+    <div e:case="already" class="stack is-md center">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>
+      <p class="verdict-word">Already in</p>
+      <p class="verdict-name">{result.holderName}</p>
+      <p class="verdict-detail">{result.typeName} · checked in at {result.checkedInAt ? time(result.checkedInAt) : ""}{result.checkedInBy ? ` by ${result.checkedInBy}` : ""}</p>
+    </div>
+
+    <div e:case="wrongshow" class="stack is-md center">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      <p class="verdict-word">Wrong show</p>
+      <p class="verdict-name">{result.holderName}</p>
+      <p class="verdict-detail">This ticket is for {result.otherShow}{result.otherShowAt ? `, ${day(result.otherShowAt)}` : ""}</p>
+    </div>
+
+    <div e:default class="stack is-md center">
+      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      <p class="verdict-word">Not found</p>
+      <p class="verdict-detail">No ticket with code {result.code || "that code"}</p>
+    </div>
+  </div>
+</Verdict>

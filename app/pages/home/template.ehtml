@@ -1,0 +1,62 @@
+import "./style.css";
+import config from "#config";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { LiveView } from "@elements/app";
+import { Layout } from "#app/shared/templates/layout";
+import { Show, TicketType, posterUrl, typesFor, leftLabel, leftClass } from "#app/shared/services/shows";
+import { money, when, time } from "#app/shared/format";
+
+<html lang="en" class="page-home" (shows: Show[], types: LiveView<TicketType>)>
+  <head>
+    <title>{config.venue.name}: upcoming shows</title>
+    <meta name="description" content={`Tickets for upcoming shows at ${config.venue.name}.`}>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout>
+      <div class="page-shell">
+        <div class="shows-hero stack is-sm">
+          <p class="eyebrow">{config.venue.name} · {config.venue.address}</p>
+          <h1>Upcoming shows</h1>
+        </div>
+
+        <p e:if={shows.length === 0} class="lede">Nothing on the calendar yet. Check back soon.</p>
+
+        <a e:if={shows.length > 0} href={`/shows/${shows[0].id}`} class="show-card show-feature">
+          <img class="poster" src={posterUrl(shows[0])} alt={`${shows[0].title} poster`} width="400" height="600">
+          <div class="stack">
+            <span class="show-date">{when(shows[0].startsAt)}</span>
+            <h2 class="show-title">{shows[0].title}</h2>
+            <p class="show-support">{shows[0].support}</p>
+            <p class="show-times">Doors {time(shows[0].doorsAt)} · Show {time(shows[0].startsAt)}</p>
+            <PriceList types={typesFor(types, shows[0].id)} />
+            <span class="button is-primary is-lg">Get tickets</span>
+          </div>
+        </a>
+
+        <div class="show-grid">
+          <a e:for={show of shows.slice(1)} href={`/shows/${show.id}`} class="show-card stack is-sm">
+            <img class="poster" src={posterUrl(show)} alt={`${show.title} poster`} width="400" height="600" loading="lazy">
+            <span class="show-date">{when(show.startsAt)}</span>
+            <h2 class="show-title">{show.title}</h2>
+            <p class="show-support">{show.support}</p>
+            <p class="show-times">Doors {time(show.doorsAt)} · Show {time(show.startsAt)}</p>
+            <PriceList types={typesFor(types, show.id)} />
+          </a>
+        </div>
+      </div>
+    </Layout>
+  </body>
+</html>
+
+<PriceList (types: TicketType[])>
+  <ul class="price-list stack is-xs">
+    <li e:for={t of types} class="row">
+      <span class="price-name">{t.name}</span>
+      <span class="row gap-3">
+        <span class={leftClass(t)}>{leftLabel(t)}</span>
+        <span class="price-amount">{money(t.priceCents)}</span>
+      </span>
+    </li>
+  </ul>
+</PriceList>

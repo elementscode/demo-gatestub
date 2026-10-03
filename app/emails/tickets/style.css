@@ -1,0 +1,57 @@
+@import "#app/shared/styles/email.css";
+
+.email.tickets .eyebrow {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #c2410c;
+}
+
+.email.tickets h1 {
+  margin: 0 0 8px;
+}
+
+.email.tickets .when {
+  color: #52525b;
+}
+
+.email.tickets .ticket {
+  margin: 16px 0;
+  border: 2px dashed #d4d4d8;
+  border-radius: 12px;
+  border-collapse: separate;
+}
+
+.email.tickets .ticket-qr {
+  padding: 10px;
+}
+
+.email.tickets .ticket-info {
+  padding: 10px 16px 10px 0;
+  vertical-align: middle;
+}
+
+.email.tickets .ticket-info p {
+  margin: 0 0 4px;
+}
+
+.email.tickets .ticket-type {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #c2410c;
+}
+
+.email.tickets .ticket-name {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.email.tickets .ticket-code {
+  font-family: Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: #52525b;
+}

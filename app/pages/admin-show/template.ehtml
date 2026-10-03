@@ -1,0 +1,194 @@
+import "./style.css";
+import config from "#config";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { LiveView, ValidationError } from "@elements/app";
+import type { FieldErrors } from "@elements/app";
+import { Layout } from "#app/shared/templates/layout";
+import { Show, TicketType, posterUrl, remaining, sales } from "#app/shared/services/shows";
+import { money, longDay, day, time } from "#app/shared/format";
+import { RecentOrder, TypeForm, addTicketType, setQuantity } from "./services";
+
+interface AddForm extends TypeForm {
+  errors: FieldErrors<TypeForm>;
+}
+
+function emptyAdd(): AddForm {
+  return { name: "", price: "", quantity: "", errors: {} };
+}
+
+function onAddType(showId: string, form: AddForm) {
+  form.errors = {};
+
+  try {
+    addTicketType(showId, { name: form.name, price: form.price, quantity: form.quantity });
+    form.name = "";
+    form.price = "";
+    form.quantity = "";
+  } catch (err: any) {
+    form.errors = err instanceof ValidationError && err.errors ? err.errors : { name: [err.message] };
+  }
+}
+
+function onQuantity(t: TicketType, status: { error: string }) {
+  status.error = "";
+
+  try {
+    setQuantity(t.id, t.quantity);
+  } catch (err: any) {
+    status.error = err.message;
+  }
+}
+
+function pct(n: number, of: number): string {
+  return `${of === 0 ? 0 : Math.round((n / of) * 100)}%`;
+}
+
+<html lang="en" class="page-admin-show" (
+  show: Show,
+  types: LiveView<TicketType>,
+  orders: RecentOrder[],
+  created: boolean,
+  private add: AddForm = emptyAdd(),
+  private status: { error: string } = { error: "" },
+)>
+  <head>
+    <title>{show.title} · Admin · {config.venue.name}</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout section="admin" width="is-wide">
+      <div class="page-shell is-wide stack is-xl">
+        <a href="/admin">← All shows</a>
+
+        <div class="admin-head row">
+          <div class="show-summary row">
+            <img src={posterUrl(show)} alt={`${show.title} poster`} width="96" height="144">
+            <div class="stack is-xs">
+              <p class="eyebrow">{longDay(show.startsAt)}</p>
+              <h1>{show.title}</h1>
+              <p>{show.support}</p>
+              <p>Doors {time(show.doorsAt)} · Show {time(show.startsAt)}</p>
+            </div>
+          </div>
+          <div class="cluster">
+            <a href={`/shows/${show.id}`} class="button is-ghost">Public page</a>
+            <a href={`/door/${show.id}`} class="button is-primary">Open door</a>
+          </div>
+        </div>
+
+        <div e:if={created} class="callout is-success">
+          <div class="callout-body">Show created and on sale at <a href={`/shows/${show.id}`}>its public page</a>.</div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <p class="stat-label">Sold</p>
+            <p class="stat-value">{sales([...types]).sold}</p>
+            <p class="stat-sub">of {sales([...types]).capacity} · {pct(sales([...types]).sold, sales([...types]).capacity)}</p>
+          </div>
+          <div class="stat">
+            <p class="stat-label">Revenue</p>
+            <p class="stat-value">{money(sales([...types]).revenue)}</p>
+            <p class="stat-sub">at face value</p>
+          </div>
+          <div class="stat">
+            <p class="stat-label">Checked in</p>
+            <p class="stat-value">{sales([...types]).checkedIn}</p>
+            <p class="stat-sub">of {sales([...types]).sold} sold · {pct(sales([...types]).checkedIn, sales([...types]).sold)}</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Ticket types</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th class="num">Price</th>
+                  <th class="num">For sale</th>
+                  <th class="num">Sold</th>
+                  <th class="num">Left</th>
+                  <th class="num">Checked in</th>
+                  <th class="num">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr e:for={t of types.sort((a, b) => a.position - b.position)}>
+                  <td>{t.name}</td>
+                  <td class="num">{money(t.priceCents)}</td>
+                  <td class="num">
+                    <input type="number"
+                           class="is-sm"
+                           style="width: 6rem"
+                           min={t.sold}
+                           value={t.quantity}
+                           aria-label={`${t.name} quantity`}
+                           onchange={() => onQuantity(t, status)}>
+                  </td>
+                  <td class="num">{t.sold}</td>
+                  <td class="num">{remaining(t)}</td>
+                  <td class="num">{t.checkedIn}</td>
+                  <td class="num">{money(t.sold * t.priceCents)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card-body stack">
+            <p e:if={status.error} class="error" role="alert">{status.error}</p>
+
+            <form class="add-type" onsubmit={() => onAddType(show.id, add)}>
+              <div class="field">
+                <label for="type-name">New ticket type</label>
+                <input id="type-name" value={add.name} placeholder="VIP, Early bird…" class={[add.errors.name && "is-error"]}>
+                <p e:if={add.errors.name} class="error">{add.errors.name?.[0]}</p>
+              </div>
+              <div class="field">
+                <label for="type-price">Price ($)</label>
+                <input id="type-price" value={add.price} inputmode="decimal" placeholder="25" class={[add.errors.price && "is-error"]}>
+                <p e:if={add.errors.price} class="error">{add.errors.price?.[0]}</p>
+              </div>
+              <div class="field">
+                <label for="type-qty">Quantity</label>
+                <input id="type-qty" value={add.quantity} inputmode="numeric" placeholder="50" class={[add.errors.quantity && "is-error"]}>
+                <p e:if={add.errors.quantity} class="error">{add.errors.quantity?.[0]}</p>
+              </div>
+              <button type="submit">Add</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Recent orders</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Buyer</th>
+                  <th>Email</th>
+                  <th class="num">Tickets</th>
+                  <th class="num">Paid</th>
+                  <th class="num">When</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr e:for={o of orders}>
+                  <td><a href={`/orders/${o.token}`}>{o.name}</a></td>
+                  <td>{o.email}</td>
+                  <td class="num">{o.tickets}</td>
+                  <td class="num">{money(o.amountTotal)}</td>
+                  <td class="num">{day(o.createdAt)} {time(o.createdAt)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p e:if={orders.length === 0} class="card-body hint">No orders yet.</p>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  </body>
+</html>

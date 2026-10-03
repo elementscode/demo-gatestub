@@ -1,0 +1,48 @@
+import "./style.css";
+import config from "#config";
+import { Order } from "#app/shared/services/orders";
+import { longDay, time, money } from "#app/shared/format";
+
+/**
+ * The fan's tickets: one QR code per ticket, each scanned once at the door.
+ *
+ * @email
+ */
+<html (order: Order)>
+  <body class="email tickets">
+    <div class="email-wrap">
+      <p class="eyebrow">{config.venue.name}</p>
+      <h1>{order.title}</h1>
+      <p class="when">
+        {longDay(order.startsAt)} · doors {time(order.doorsAt)} · show {time(order.startsAt)}<br>
+        {config.venue.address}
+      </p>
+
+      <p>
+        Hi {order.name}, you're in. Show one code per person at the door, on
+        your phone or printed. Each code works once.
+      </p>
+
+      <table class="ticket" e:for={t of order.tickets} role="presentation" width="100%">
+        <tr>
+          <td class="ticket-qr" width="180">
+            <img src={`/qr/${t.code}.png`} width="160" height="160" alt={`QR code for ticket ${t.code}`}>
+          </td>
+          <td class="ticket-info">
+            <p class="ticket-type">{t.typeName}</p>
+            <p class="ticket-name">{t.holderName}</p>
+            <p class="ticket-code">{t.code}</p>
+          </td>
+        </tr>
+      </table>
+
+      <p>
+        <a href={`/orders/${order.token}`}>View your tickets online</a>
+      </p>
+
+      <div class="email-footer">
+        <p>Order total {money(order.amountTotal)} · {config.venue.name}, {config.venue.address}</p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,93 @@
+import "./style.css";
+import config from "#config";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { redirect } from "@elements/app";
+import { Layout } from "#app/shared/templates/layout";
+import { money, longDay, time, plural } from "#app/shared/format";
+import { TestCheckoutOrder, payTestOrder } from "./services";
+
+async function onPay(order: TestCheckoutOrder, ui: { busy: boolean; error: string }) {
+  ui.busy = true;
+  ui.error = "";
+
+  try {
+    redirect(`/orders/${payTestOrder(order.token)}`);
+  } catch (err: any) {
+    ui.error = err.message;
+    ui.busy = false;
+  }
+}
+
+<html lang="en" class="page-checkout-test" (
+  order: TestCheckoutOrder,
+  private ui: { busy: boolean; error: string } = { busy: false, error: "" },
+)>
+  <head>
+    <title>Checkout · {order.title} · {config.venue.name}</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout>
+      <div class="page-shell is-form stack is-lg">
+        <div class="checkout-head">
+          <h1>Checkout</h1>
+          <span class="pill is-warning">Test mode</span>
+        </div>
+
+        <div class="card checkout">
+          <div class="checkout-show">
+            <img e:if={order.posterHash}
+                 class="checkout-poster"
+                 src={`/posters/${order.showId}/${order.posterHash!.slice(0, 16)}`}
+                 alt=""
+                 width="72"
+                 height="108">
+            <div class="stack is-xs">
+              <span class="show-date">{longDay(order.startsAt)} <span class="nowrap">· {time(order.startsAt)}</span></span>
+              <h2>{order.title}</h2>
+              <p e:if={order.support} class="checkout-support">{order.support}</p>
+            </div>
+          </div>
+
+          <ul class="checkout-lines">
+            <li e:for={line of order.lines}>
+              <span>
+                <span class="checkout-line-name">{line.name}</span>
+                <span class="checkout-line-qty">{line.quantity} × {money(line.unitAmount)}</span>
+              </span>
+              <span class="checkout-amount">{money(line.unitAmount * line.quantity)}</span>
+            </li>
+          </ul>
+
+          <div class="checkout-total">
+            <span>Total</span>
+            <strong>{money(order.totalCents)}</strong>
+          </div>
+
+          <div class="checkout-pay stack">
+            <p class="checkout-buyer">
+              {plural(order.lines.reduce((sum, l) => sum + l.quantity, 0), "ticket")} for <strong>{order.name}</strong>, sent to {order.email}
+            </p>
+
+            <p e:if={ui.error} class="error" role="alert">{ui.error}</p>
+
+            <button class={["is-primary is-lg is-block", ui.busy && "is-loading"]}
+                    disabled={ui.busy}
+                    onclick={() => onPay(order, ui)}>
+              Pay {money(order.totalCents)}
+            </button>
+
+            <a class="checkout-cancel" href={`/checkout/cancel/${order.token}`}>Cancel and go back</a>
+          </div>
+        </div>
+
+        <p class="checkout-note">
+          No card is charged here: this page stands in for Stripe while the app has no key.
+          Add <code>STRIPE_SECRET_KEY</code> to <code>config/env/development.env</code> and this
+          button goes to Stripe Checkout instead.
+        </p>
+      </div>
+    </Layout>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+@import "#app/shared/styles/page.css";
+
+.signin {
+  padding-top: var(--space-6);
+}
+
+.signin h1 {
+  margin: 0;
+}
+
+.demo-logins {
+  font-size: var(--text-sm);
+}
+
+.demo-logins table {
+  width: 100%;
+}
+
+.demo-logins td {
+  padding-block: var(--space-1);
+}
+
+.demo-logins code {
+  font-size: var(--text-sm);
+}
+
+.demo-logins button {
+  white-space: nowrap;
+}

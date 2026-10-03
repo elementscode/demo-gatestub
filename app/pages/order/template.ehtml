@@ -1,0 +1,58 @@
+import "./style.css";
+import config from "#config";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Layout } from "#app/shared/templates/layout";
+import { Order } from "#app/shared/services/orders";
+import { money, longDay, time, plural } from "#app/shared/format";
+
+<html lang="en" class="page-order" (order: Order)>
+  <head>
+    <title>Your tickets for {order.title} · {config.venue.name}</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout>
+      <div class="page-shell is-form stack is-xl">
+        <div class="order-head stack is-sm">
+          <span class="show-date">{longDay(order.startsAt)}</span>
+          <h1>{order.title}</h1>
+          <p>Doors {time(order.doorsAt)} · Show {time(order.startsAt)} · {config.venue.address}</p>
+        </div>
+
+        <div e:if={order.status === "paid"} class="callout is-success">
+          <div class="callout-title">You're going. {plural(order.tickets.length, "ticket")}, {money(order.amountTotal)} paid.</div>
+          <div class="callout-body">We emailed these to {order.email}. Show one code per person at the door. Each code scans once.</div>
+        </div>
+
+        <div e:elseif={order.status === "pending"} class="callout is-warning">
+          <div class="callout-title">Payment processing</div>
+          <div class="callout-body">Stripe hasn't confirmed this payment yet. Your tickets appear here and in your email as soon as it does.</div>
+        </div>
+
+        <div e:else class="callout is-danger">
+          <div class="callout-title">This order wasn't paid</div>
+          <div class="callout-body">No tickets were issued. <a href={`/shows/${order.showId}`}>Try again</a>.</div>
+        </div>
+
+        <div e:if={order.tickets.length > 0} class="tickets">
+          <article e:for={t of order.tickets} class={["ticket", t.checkedInAt && "is-used"]}>
+            <div class="ticket-top">
+              <p class="ticket-type">{t.typeName}</p>
+              <p class="ticket-show">{t.holderName}</p>
+            </div>
+            <div class="ticket-qr">
+              <img src={`/qr/${t.code}.png`} width="290" height="290" alt={`QR code for ticket ${t.code}`}>
+              <p class="ticket-code">{t.code}</p>
+            </div>
+            <div class="ticket-foot row">
+              <span>{config.venue.name}</span>
+              <span e:if={t.checkedInAt} class="pill is-success">Checked in</span>
+              <span e:else class="pill">Valid</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </Layout>
+  </body>
+</html>
