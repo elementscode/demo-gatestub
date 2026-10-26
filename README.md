@@ -1,41 +1,12 @@
-![Gatestub, event ticketing for a small music venue built with Elements: the admin sales page with five upcoming shows, their gig posters, tickets sold, revenue and tonight's live check-in count.](https://elements.dev/demos/01a0f43a-6df4-7722-a448-0d34d942bb2f/poster?v=a2d0076cfaf9)
+![Ticket sales with QR check-in, built by Claude Code on Elements: the admin sales page with five upcoming shows, their gig posters, tickets sold, revenue and tonight's live check-in count.](https://elements.dev/demos/01a0f43a-6df4-7722-a448-0d34d942bb2f/poster?v=a2d0076cfaf9)
 
-# Gatestub
+# Ticket sales with QR check-in, built by Claude Code on Elements
 
-> A demo app built with [Elements](https://elements.dev).
+> Gatestub is a full-stack app built with Claude Code on Elements.
 
 Shows with posters and ticket types, card checkout, one QR code per ticket by email, sales per show, and a phone door check-in with a live count.
 
-**Demo:** [Gatestub](https://elements.dev/demos/01a0f43a-6df4-7722-a448-0d34d942bb2f)
-
-## Agent specs
-
-- **Agent:** Claude Code, Opus 5.5 Medium
-- **Time:** 22 min
-- **Cost:** $7.43 at API rates, September 2026
-
-## Get started
-
-```bash
-elements create gatestub -scaffold=elementscode/demo-gatestub
-```
-
-## Seed data and demo accounts
-
-The seed creates The Gatehouse's calendar: tonight's show, Mercury Fuzz Choir,
-with 141 of 230 ticket holders already checked in, and four more shows over
-the next four weeks, each with a drawn gig poster, general admission and
-balcony tickets, and existing orders. The sign-in page lists both logins.
-
-| Email               | Password    | Role  |
-| ------------------- | ----------- | ----- |
-| admin@gatestub.test | `backstage` | admin |
-| door@gatestub.test  | `frontdoor` | door  |
-
-Admins see sales at `/admin` and create shows at `/admin/shows/new`. Door
-staff check tickets in at `/door` on a phone, by camera or by name. Phones
-only allow the camera over https, so scanning works on `localhost` and once
-deployed; search by name works everywhere.
+[Run this app on your machine](https://elements.dev/demos/01a0f43a-6df4-7722-a448-0d34d942bb2f). Use this demo as inspiration, or as the starting point for your own app. Your agent creates a new app with this one as the scaffold, and you prompt it to add whatever features you want.
 
 ## Payments
 
@@ -54,8 +25,6 @@ QR code per ticket) go to the project server log instead of being sent.
 
 Gatestub needed guest card checkout, QR code tickets by email, a phone door page, and live ticket and check-in counts. Each of those is a part of Elements, so the agent spent its 22 minutes on the venue's night itself.
 
-### What Elements gave the app
-
 - **Live ticket counts.** Ticket types are a LiveTable. Database triggers keep sold and checked-in counts current as tickets are issued and scanned and broadcast each change, so tickets remaining and checked in versus sold update on every open screen.
 
 - **Card checkout with just an email.** Checkout reads prices and stock under a row lock, holds the tickets and sends the fan to Stripe. Tickets are issued when the fan returns and again when Stripe's webhook arrives, once either way. Until a Stripe key is set, the pay button opens a test checkout inside the app that records the payment through the same function, so tickets and emails work from the start. With one secret key it goes to Stripe, and in production the app registers its own webhook on the first checkout.
@@ -68,16 +37,6 @@ Gatestub needed guest card checkout, QR code tickets by email, a phone door page
 
 - **Data from SQL files.** Migrations define the schema and seed four upcoming shows with drawn posters and sales, plus tonight's show with 141 of 230 checked in. The project server applied each one as soon as it was saved.
 
-### What the project server gave the agent
+## Why Elements
 
-The project server runs alongside the agent and answers as soon as a file is saved: it type-checks the templates, TypeScript and SQL, applies migrations and reruns the tests, so every question came back right away and the agent kept building.
-
-### What shipped
-
-The app type-checks with zero errors and all 32 tests pass. Every page works on desktop and phone. A real sandbox payment goes through Stripe end to end and issues tickets with their QR codes, and live updates arrive across phones, such as the door count moving on a second phone the moment a ticket is scanned.
-
-**Demo:** [Gatestub](https://elements.dev/demos/01a0f43a-6df4-7722-a448-0d34d942bb2f)
-
-## License
-
-MIT. See [LICENSE](LICENSE).
+Elements is an integrated full-stack app framework and a project server. The project server checks the agent's work as it builds: it type-checks the server and browser code, analyzes the program, applies migrations and runs the tests, then reports the results to the agent. A security mistake, such as calling a server-only function from the browser, is a compile error. The agent reads the report and fixes its own mistakes before it tells you a feature is done. The same checks run on every feature you ask for next.
