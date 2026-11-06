@@ -54,7 +54,7 @@
   padding: var(--space-5);
   border-top: 2px dashed var(--rule);
   text-align: center;
-  background: #fff;
+  background: var(--white);
 }
 
 .ticket-qr img {
@@ -71,7 +71,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   letter-spacing: 0.08em;
-  color: #3f3f46;
+  color: var(--neutral-700);
 }
 
 .ticket-foot {

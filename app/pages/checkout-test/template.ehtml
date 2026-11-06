@@ -5,6 +5,10 @@ import { redirect } from "@elements/app";
 import { Layout } from "#app/shared/templates/layout";
 import { money, longDay, time, plural } from "#app/shared/format";
 import { TestCheckoutOrder, payTestOrder } from "./services";
+import { Button } from "@elements/ui/button";
+import { Badge } from "@elements/ui/badge";
+import { Alert } from "@elements/ui/alert";
+import { Card } from "@elements/ui/card";
 
 async function onPay(order: TestCheckoutOrder, ui: { busy: boolean; error: string }) {
   ui.busy = true;
@@ -32,10 +36,10 @@ async function onPay(order: TestCheckoutOrder, ui: { busy: boolean; error: strin
       <div class="page-shell is-form stack is-lg">
         <div class="checkout-head">
           <h1>Checkout</h1>
-          <span class="pill is-warning">Test mode</span>
+          <Badge variant="warning">Test mode</Badge>
         </div>
 
-        <div class="card checkout">
+        <Card class="checkout">
           <div class="checkout-show">
             <img e:if={order.posterHash}
                  class="checkout-poster"
@@ -70,17 +74,15 @@ async function onPay(order: TestCheckoutOrder, ui: { busy: boolean; error: strin
               {plural(order.lines.reduce((sum, l) => sum + l.quantity, 0), "ticket")} for <strong>{order.name}</strong>, sent to {order.email}
             </p>
 
-            <p e:if={ui.error} class="error" role="alert">{ui.error}</p>
+            <Alert e:if={ui.error} variant="danger" description={ui.error} />
 
-            <button class={["is-primary is-lg is-block", ui.busy && "is-loading"]}
-                    disabled={ui.busy}
-                    onclick={() => onPay(order, ui)}>
+            <Button variant="primary" size="lg" block loading={ui.busy} onclick={() => onPay(order, ui)}>
               Pay {money(order.totalCents)}
-            </button>
+            </Button>
 
             <a class="checkout-cancel" href={`/checkout/cancel/${order.token}`}>Cancel and go back</a>
           </div>
-        </div>
+        </Card>
 
         <p class="checkout-note">
           No card is charged here: this page stands in for Stripe while the app has no key.

@@ -16,7 +16,7 @@
   line-height: var(--leading-tight);
 }
 
-.door-head select {
+.door-show {
   max-width: 14rem;
 }
 
@@ -26,7 +26,7 @@
     align-items: stretch;
   }
 
-  .door-head select {
+  .door-show {
     max-width: none;
   }
 
@@ -62,18 +62,7 @@
 }
 
 .count-bar {
-  height: 0.6rem;
-  border-radius: var(--radius-full);
-  background: var(--bg-muted);
-  overflow: hidden;
-}
-
-.count-bar span {
-  display: block;
-  height: 100%;
-  background: var(--success);
-  border-radius: inherit;
-  transition: width 400ms ease;
+  --progress-color: var(--success);
 }
 
 .count-types {
@@ -83,23 +72,19 @@
   font-variant-numeric: tabular-nums;
 }
 
-.mode {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
+.mode .tab-list {
+  width: 100%;
 }
 
-.mode button.is-active {
-  background: var(--ink);
-  color: var(--bg);
-  border-color: var(--ink);
+.mode .tab {
+  flex: 1;
 }
 
 .viewfinder {
   position: relative;
   aspect-ratio: 1;
   border-radius: var(--radius-lg);
-  background: #0b0b0e;
+  background: var(--neutral-950);
   overflow: hidden;
 }
 
@@ -124,35 +109,12 @@
   inset: 0;
   padding: var(--space-6);
   text-align: center;
-  color: #e4e4e7;
+  color: var(--neutral-200);
 }
 
 .viewfinder-idle p {
   margin: 0;
-  color: #a1a1aa;
-}
-
-.hits {
-  margin: 0;
-  padding: 0;
-}
-
-.hit {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: center;
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--rule);
-}
-
-.hit-name {
-  font-weight: var(--weight-semibold);
-}
-
-.hit-meta {
-  font-size: var(--text-sm);
-  color: var(--ink-soft);
+  color: var(--neutral-400);
 }
 
 .hit-code {
@@ -170,22 +132,22 @@
   gap: var(--space-4);
   padding: var(--space-8) var(--space-6);
   text-align: center;
-  color: #fff;
+  color: var(--white);
   cursor: pointer;
   animation: verdict-in 160ms ease-out;
 }
 
 .verdict.is-valid {
-  background: #0f9d58;
+  background: var(--success-600);
 }
 
 .verdict.is-already {
-  background: #d97706;
+  background: var(--warning-600);
 }
 
 .verdict.is-notfound,
 .verdict.is-wrongshow {
-  background: #dc2626;
+  background: var(--danger-600);
 }
 
 .verdict svg {
@@ -221,7 +183,7 @@
 .verdict-actions button {
   background: rgb(255 255 255 / 0.18);
   border-color: rgb(255 255 255 / 0.5);
-  color: #fff;
+  color: var(--white);
 }
 
 .verdict-hint {

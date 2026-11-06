@@ -7,6 +7,13 @@ import { Layout } from "#app/shared/templates/layout";
 import { Show, TicketType } from "#app/shared/services/shows";
 import { when, time, day } from "#app/shared/format";
 import { CheckInResult, TicketHit, checkInCode, checkInTicket, undoCheckIn, searchTickets } from "./services";
+import { Button } from "@elements/ui/button";
+import { Badge } from "@elements/ui/badge";
+import { Input } from "@elements/ui/input";
+import { NativeSelect } from "@elements/ui/native-select";
+import { Progress } from "@elements/ui/progress";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@elements/ui/tabs";
+import { ItemGroup, Item, ItemContent, ItemTitle, ItemDescription, ItemActions } from "@elements/ui/item";
 
 interface ShowChoice {
   id: string;
@@ -59,6 +66,10 @@ function percent(types: Iterable<TicketType>): string {
   let { sold, checkedIn } = totals(types);
 
   return `${sold === 0 ? 0 : Math.round((checkedIn / sold) * 100)}%`;
+}
+
+function showOptions(shows: ShowChoice[]) {
+  return shows.map((s) => ({ value: s.id, label: `${day(s.startsAt)} · ${s.title}` }));
 }
 
 function tone(ok: boolean) {
@@ -178,12 +189,17 @@ function onSearchInput(door: DoorState, showId: string) {
   }
 }
 
-function onMode(door: DoorState, mode: "scan" | "search") {
+function onMode(door: DoorState, value: string) {
+  let mode: "scan" | "search" = value === "search" ? "search" : "scan";
   door.mode = mode;
 
   if (mode === "search") {
     stopCamera(door);
   }
+}
+
+function onSearchInsert(e: Event) {
+  (e.target as HTMLElement).querySelector("input")?.focus();
 }
 
 function onVideoInsert(e: Event) {
@@ -353,9 +369,13 @@ function onShowChange(e: Event) {
             <h1>{show.title}</h1>
           </div>
 
-          <select e:if={shows.length > 1} aria-label="Show" class="is-sm" onchange={onShowChange}>
-            <option e:for={s of shows} value={s.id} selected={s.id === show.id}>{day(s.startsAt)} · {s.title}</option>
-          </select>
+          <NativeSelect e:if={shows.length > 1}
+                        class="door-show"
+                        size="sm"
+                        value={show.id}
+                        options={showOptions(shows)}
+                        attrs={{ "aria-label": "Show" }}
+                        onchange={onShowChange} />
         </div>
 
         <div class="count stack is-sm" aria-live="polite">
@@ -367,81 +387,81 @@ function onShowChange(e: Event) {
             <span class="count-in">{totals(types).checkedIn}</span>
             <span class="count-of">of {totals(types).sold} sold</span>
           </div>
-          <div class="count-bar"><span style={`width: ${percent(types)}`}></span></div>
+          <Progress class="count-bar"
+                    value={totals(types).checkedIn}
+                    max={Math.max(totals(types).sold, 1)}
+                    attrs={{ "aria-label": "Checked in" }} />
           <div class="count-types cluster">
             <span e:for={t of types.sort((a, b) => a.position - b.position)}>{t.name} {t.checkedIn}/{t.sold}</span>
           </div>
         </div>
 
-        <div class="mode" role="tablist">
-          <button role="tab"
-                  aria-selected={door.mode === "scan"}
-                  class={["is-lg", door.mode === "scan" && "is-active"]}
-                  onclick={() => onMode(door, "scan")}>Scan</button>
-          <button role="tab"
-                  aria-selected={door.mode === "search"}
-                  class={["is-lg", door.mode === "search" && "is-active"]}
-                  onclick={() => onMode(door, "search")}>Search by name</button>
-        </div>
+        <Tabs class="mode" variant="segmented" value={door.mode} onValueChange={(v) => onMode(door, v)}>
+          <TabsList label="Check-in mode">
+            <TabsTrigger value="scan">Scan</TabsTrigger>
+            <TabsTrigger value="search">Search by name</TabsTrigger>
+          </TabsList>
 
-        <div e:if={door.mode === "scan"} class="stack">
-          <div class="viewfinder">
-            <video playsinline muted autoplay oninsert={onVideoInsert} onremove={() => onVideoRemove(door)}></video>
-            <div e:if={door.camera === "on"} class="viewfinder-frame"></div>
+          <TabsContent value="scan">
+            <div e:if={door.mode === "scan"} class="stack">
+              <div class="viewfinder">
+                <video playsinline muted autoplay oninsert={onVideoInsert} onremove={() => onVideoRemove(door)}></video>
+                <div e:if={door.camera === "on"} class="viewfinder-frame"></div>
 
-            <div e:if={door.camera !== "on"} class="viewfinder-idle center">
-              <div class="stack is-md">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
-                  <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/>
-                  <path d="M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 16h3"/>
-                </svg>
-                <p e:if={door.camera === "error"}>{door.cameraError}</p>
-                <p e:else>Point the camera at a ticket's QR code.</p>
-                <button class={["is-primary is-lg", door.camera === "starting" && "is-loading"]}
-                        disabled={door.camera === "starting"}
-                        onclick={() => onStartCamera(door, show.id)}>
-                  {door.camera === "error" ? "Try again" : "Start camera"}
-                </button>
+                <div e:if={door.camera !== "on"} class="viewfinder-idle center">
+                  <div class="stack is-md">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                      <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/>
+                      <path d="M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 16h3"/>
+                    </svg>
+                    <p e:if={door.camera === "error"}>{door.cameraError}</p>
+                    <p e:else>Point the camera at a ticket's QR code.</p>
+                    <Button variant="primary"
+                            size="lg"
+                            loading={door.camera === "starting"}
+                            onclick={() => onStartCamera(door, show.id)}>
+                      {door.camera === "error" ? "Try again" : "Start camera"}
+                    </Button>
+                  </div>
+                </div>
               </div>
+
+              <form class="manual row" onsubmit={() => onManualSubmit(door, show.id)}>
+                <Input value={door.manual}
+                       placeholder="Or type the ticket code"
+                       class="font-mono"
+                       attrs={{ "aria-label": "Ticket code", autocapitalize: "characters", autocomplete: "off", spellcheck: "false" }} />
+                <Button type="submit" disabled={!door.manual.trim()}>Check</Button>
+              </form>
             </div>
-          </div>
+          </TabsContent>
 
-          <form class="row" onsubmit={() => onManualSubmit(door, show.id)}>
-            <input value={door.manual}
-                   aria-label="Ticket code"
-                   placeholder="Or type the ticket code"
-                   autocapitalize="characters"
-                   autocomplete="off"
-                   spellcheck={false}
-                   class="font-mono">
-            <button type="submit" disabled={!door.manual.trim()}>Check</button>
-          </form>
-        </div>
+          <TabsContent value="search">
+            <div e:if={door.mode === "search"} class="stack" oninsert={onSearchInsert}>
+              <Input type="search"
+                     size="lg"
+                     value={door.query}
+                     oninput={() => onSearchInput(door, show.id)}
+                     placeholder="Name, email or code"
+                     attrs={{ "aria-label": "Search by name, email or code", autocomplete: "off", spellcheck: "false" }} />
 
-        <div e:else class="stack">
-          <input type="search"
-                 class="is-lg"
-                 value={door.query}
-                 oninput={() => onSearchInput(door, show.id)}
-                 aria-label="Search by name, email or code"
-                 placeholder="Name, email or code"
-                 autocomplete="off"
-                 spellcheck={false}
-                 focus={true}>
+              <p e:if={door.searched && door.hits.length === 0} class="hint">No tickets for this show match “{door.searched}”.</p>
 
-          <p e:if={door.searched && door.hits.length === 0} class="hint">No tickets for this show match “{door.searched}”.</p>
-
-          <ul class="hits">
-            <li e:for={hit of door.hits} class="hit">
-              <div class="stack is-xs">
-                <span class="hit-name">{hit.holderName}</span>
-                <span class="hit-meta">{hit.typeName} · <span class="hit-code">{hit.code.slice(-6)}</span> · {hit.email}</span>
-              </div>
-              <span e:if={hit.checkedInAt} class="pill is-success">In {time(hit.checkedInAt!)}</span>
-              <button e:else class="is-primary" onclick={() => onAdmitHit(door, show.id, hit)}>Check in</button>
-            </li>
-          </ul>
-        </div>
+              <ItemGroup e:if={door.hits.length > 0} label="Tickets">
+                <Item e:for={hit of door.hits} size="sm" class="hit">
+                  <ItemContent>
+                    <ItemTitle>{hit.holderName}</ItemTitle>
+                    <ItemDescription>{hit.typeName} · <span class="hit-code">{hit.code.slice(-6)}</span> · {hit.email}</ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <Badge e:if={hit.checkedInAt} variant="success">In {time(hit.checkedInAt!)}</Badge>
+                    <Button e:else variant="primary" onclick={() => onAdmitHit(door, show.id, hit)}>Check in</Button>
+                  </ItemActions>
+                </Item>
+              </ItemGroup>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <div e:if={door.result}

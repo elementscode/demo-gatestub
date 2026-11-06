@@ -4,6 +4,8 @@ import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { Layout } from "#app/shared/templates/layout";
 import { Order } from "#app/shared/services/orders";
 import { money, longDay, time, plural } from "#app/shared/format";
+import { Alert, AlertTitle, AlertDescription } from "@elements/ui/alert";
+import { Badge } from "@elements/ui/badge";
 
 <html lang="en" class="page-order" (order: Order)>
   <head>
@@ -20,20 +22,21 @@ import { money, longDay, time, plural } from "#app/shared/format";
           <p>Doors {time(order.doorsAt)} · Show {time(order.startsAt)} · {config.venue.address}</p>
         </div>
 
-        <div e:if={order.status === "paid"} class="callout is-success">
-          <div class="callout-title">You're going. {plural(order.tickets.length, "ticket")}, {money(order.amountTotal)} paid.</div>
-          <div class="callout-body">We emailed these to {order.email}. Show one code per person at the door. Each code scans once.</div>
-        </div>
+        <Alert e:if={order.status === "paid"} variant="success" role="none">
+          <AlertTitle>You're going. {plural(order.tickets.length, "ticket")}, {money(order.amountTotal)} paid.</AlertTitle>
+          <AlertDescription>We emailed these to {order.email}. Show one code per person at the door. Each code scans once.</AlertDescription>
+        </Alert>
 
-        <div e:elseif={order.status === "pending"} class="callout is-warning">
-          <div class="callout-title">Payment processing</div>
-          <div class="callout-body">Stripe hasn't confirmed this payment yet. Your tickets appear here and in your email as soon as it does.</div>
-        </div>
+        <Alert e:elseif={order.status === "pending"}
+               variant="warning"
+               role="none"
+               title="Payment processing"
+               description="Stripe hasn't confirmed this payment yet. Your tickets appear here and in your email as soon as it does." />
 
-        <div e:else class="callout is-danger">
-          <div class="callout-title">This order wasn't paid</div>
-          <div class="callout-body">No tickets were issued. <a href={`/shows/${order.showId}`}>Try again</a>.</div>
-        </div>
+        <Alert e:else variant="danger" role="none">
+          <AlertTitle>This order wasn't paid</AlertTitle>
+          <AlertDescription>No tickets were issued. <a href={`/shows/${order.showId}`}>Try again</a>.</AlertDescription>
+        </Alert>
 
         <div e:if={order.tickets.length > 0} class="tickets">
           <article e:for={t of order.tickets} class={["ticket", t.checkedInAt && "is-used"]}>
@@ -47,8 +50,8 @@ import { money, longDay, time, plural } from "#app/shared/format";
             </div>
             <div class="ticket-foot row">
               <span>{config.venue.name}</span>
-              <span e:if={t.checkedInAt} class="pill is-success">Checked in</span>
-              <span e:else class="pill">Valid</span>
+              <Badge e:if={t.checkedInAt} variant="success">Checked in</Badge>
+              <Badge e:else variant="secondary">Valid</Badge>
             </div>
           </article>
         </div>
