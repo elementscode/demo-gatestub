@@ -6,6 +6,8 @@
 
 Shows with posters and ticket types, card checkout, one QR code per ticket by email, sales per show, and a phone door check-in with a live count.
 
+Gatestub uses the `brutalist` theme from @elements/ui.
+
 [Run this app on your machine](https://elements.dev/demos/01a0f43a-6df4-7722-a448-0d34d942bb2f). Use this demo as inspiration, or as the starting point for your own app. Your agent creates a new app with this one as the scaffold, and you prompt it to add whatever features you want.
 
 ## Payments
