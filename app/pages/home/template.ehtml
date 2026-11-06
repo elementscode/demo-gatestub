@@ -5,6 +5,7 @@ import { LiveView } from "@elements/app";
 import { Layout } from "#app/shared/templates/layout";
 import { Show, TicketType, posterUrl, typesFor, leftLabel, leftClass } from "#app/shared/services/shows";
 import { money, when, time } from "#app/shared/format";
+import { Empty } from "@elements/ui/empty";
 
 <html lang="en" class="page-home" (shows: Show[], types: LiveView<TicketType>)>
   <head>
@@ -20,7 +21,7 @@ import { money, when, time } from "#app/shared/format";
           <h1>Upcoming shows</h1>
         </div>
 
-        <p e:if={shows.length === 0} class="lede">Nothing on the calendar yet. Check back soon.</p>
+        <Empty e:if={shows.length === 0} description="Nothing on the calendar yet. Check back soon." />
 
         <a e:if={shows.length > 0} href={`/shows/${shows[0].id}`} class="show-card show-feature">
           <img class="poster" src={posterUrl(shows[0])} alt={`${shows[0].title} poster`} width="400" height="600">
