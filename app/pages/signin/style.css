@@ -12,18 +12,10 @@
   font-size: var(--text-sm);
 }
 
-.demo-logins table {
-  width: 100%;
-}
-
 .demo-logins td {
   padding-block: var(--space-1);
 }
 
 .demo-logins code {
   font-size: var(--text-sm);
-}
-
-.demo-logins button {
-  white-space: nowrap;
 }
