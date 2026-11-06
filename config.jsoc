@@ -17,8 +17,8 @@
 {
   package: {
     dependencies: {
-      "@elements/app": "local",
-      "@elements/ui": "local",
+      "@elements/app": "latest",
+      "@elements/ui": "latest",
       "@types/node": "latest",
       "jsqr": "^1.4.0",
       "qrcode-generator": "^2.0.4",
