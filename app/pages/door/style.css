@@ -72,14 +72,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.mode .tab-list {
-  width: 100%;
-}
-
-.mode .tab {
-  flex: 1;
-}
-
 .viewfinder {
   position: relative;
   aspect-ratio: 1;
@@ -180,7 +172,7 @@
   justify-content: center;
 }
 
-.verdict-actions button {
+.verdict-actions .button {
   background: rgb(255 255 255 / 0.18);
   border-color: rgb(255 255 255 / 0.5);
   color: var(--white);

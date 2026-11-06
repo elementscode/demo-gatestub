@@ -198,10 +198,6 @@ function onMode(door: DoorState, value: string) {
   }
 }
 
-function onSearchInsert(e: Event) {
-  (e.target as HTMLElement).querySelector("input")?.focus();
-}
-
 function onVideoInsert(e: Event) {
   cam.video = e.target as HTMLVideoElement;
 }
@@ -396,7 +392,7 @@ function onShowChange(e: Event) {
           </div>
         </div>
 
-        <Tabs class="mode" variant="segmented" value={door.mode} onValueChange={(v) => onMode(door, v)}>
+        <Tabs variant="segmented" block value={door.mode} onValueChange={(v) => onMode(door, v)}>
           <TabsList label="Check-in mode">
             <TabsTrigger value="scan">Scan</TabsTrigger>
             <TabsTrigger value="search">Search by name</TabsTrigger>
@@ -437,9 +433,10 @@ function onShowChange(e: Event) {
           </TabsContent>
 
           <TabsContent value="search">
-            <div e:if={door.mode === "search"} class="stack" oninsert={onSearchInsert}>
+            <div e:if={door.mode === "search"} class="stack">
               <Input type="search"
                      size="lg"
+                     autoFocus
                      value={door.query}
                      oninput={() => onSearchInput(door, show.id)}
                      placeholder="Name, email or code"
@@ -471,8 +468,8 @@ function onShowChange(e: Event) {
         <Verdict result={door.result!} />
 
         <div class="verdict-actions cluster">
-          <button e:if={door.result!.status === "valid"} class="is-lg" onclick={() => onUndo(door, show.id)}>Undo</button>
-          <button class="is-lg" onclick={() => onDismiss(door)}>Next</button>
+          <Button e:if={door.result!.status === "valid"} size="lg" onclick={() => onUndo(door, show.id)}>Undo</Button>
+          <Button size="lg" onclick={() => onDismiss(door)}>Next</Button>
         </div>
 
         <p class="verdict-hint">Tap anywhere to continue</p>
