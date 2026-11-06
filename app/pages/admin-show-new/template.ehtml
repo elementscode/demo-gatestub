@@ -34,7 +34,7 @@ function blank(): NewShow {
       date: "",
       doors: "19:00",
       starts: "20:00",
-      poster: null,
+      poster: [],
       types: [
         { id: "row-ga", name: "General admission", price: "20", quantity: "220" },
         { id: "row-balcony", name: "Balcony", price: "30", quantity: "60" },
@@ -73,7 +73,7 @@ function onSubmit(state: NewShow) {
   }
 }
 
-function previewUrl(poster: File | null): string {
+function previewUrl(poster: File | undefined): string {
   if (!poster || !poster.data || typeof URL === "undefined") {
     return "";
   }
@@ -130,9 +130,9 @@ function previewUrl(poster: File | null): string {
               <CardTitle level={2}>Poster</CardTitle>
             </CardHeader>
             <CardContent class="row is-start gap-4">
-              <img e:if={state.form.poster} class="poster-preview" src={previewUrl(state.form.poster)} alt="Poster preview" width="128" height="192">
+              <img e:if={state.form.poster.length > 0} class="poster-preview" src={previewUrl(state.form.poster[0])} alt="Poster preview" width="128" height="192">
               <div class="field">
-                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" value={state.form.poster} aria-label="Poster image">
+                <Input type="file" files={state.form.poster} attrs={{ accept: "image/png,image/jpeg,image/webp,image/gif", "aria-label": "Poster image" }} />
                 <p class="hint">Portrait, 2:3 works best. PNG, JPEG, WebP or GIF under 4 MB.</p>
                 <p e:if={state.errors.poster} class="error">{state.errors.poster?.[0]}</p>
               </div>

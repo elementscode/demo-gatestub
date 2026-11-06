@@ -10,7 +10,7 @@ function form(overrides: Partial<ShowForm> = {}): ShowForm {
     date: "2031-06-12",
     doors: "19:00",
     starts: "20:00",
-    poster: null,
+    poster: [],
     types: [
       { name: "General admission", price: "18.50", quantity: "200" },
       { name: "", price: "", quantity: "" },

@@ -11,7 +11,7 @@ export interface ShowForm {
   date: string;
   doors: string;
   starts: string;
-  poster: File | null;
+  poster: File[];
   types: TypeForm[];
 }
 
@@ -44,9 +44,11 @@ export function createShow(form: ShowForm): string {
     errors.starts = ["The show starts after doors open."];
   }
 
-  if (form.poster && !POSTER_TYPES.has(form.poster.contentType)) {
+  let poster = form.poster[0];
+
+  if (poster && !POSTER_TYPES.has(poster.contentType)) {
     errors.poster = ["Use a PNG, JPEG, WebP or GIF image."];
-  } else if (form.poster && form.poster.size > MAX_POSTER) {
+  } else if (poster && poster.size > MAX_POSTER) {
     errors.poster = ["Keep the poster under 4 MB."];
   }
 
@@ -82,8 +84,8 @@ export function createShow(form: ShowForm): string {
                    ${form.description.trim()},
                    (${form.date}::date + ${form.doors}::time) at time zone ${tz},
                    (${form.date}::date + ${form.starts}::time) at time zone ${tz},
-                   ${form.poster?.contentType ?? null},
-                   ${form.poster?.data ?? null})
+                   ${poster?.contentType ?? null},
+                   ${poster?.data ?? null})
         returning id, startsAt
     `).firstOrThrow();
 
