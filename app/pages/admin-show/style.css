@@ -36,21 +36,16 @@
   align-items: end;
 }
 
-@media (max-width: 40rem) {
-  .quantity-input {
-  width: 6rem;
-  margin-left: auto;
+.quantity-input input {
+  text-align: end;
 }
 
-.add-type {
+@media (max-width: 40rem) {
+  .add-type {
     grid-template-columns: 1fr 1fr;
   }
 
   .add-type .field:first-child {
     grid-column: 1 / -1;
   }
-}
-
-.quantity-input input {
-  text-align: end;
 }
