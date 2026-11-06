@@ -7,6 +7,12 @@ import { Layout } from "#app/shared/templates/layout";
 import { Show, TicketType, posterUrl, remaining, leftLabel, leftClass } from "#app/shared/services/shows";
 import { OrderForm, MAX_PER_ORDER, startOrder } from "#app/shared/checkout";
 import { money, longDay, time } from "#app/shared/format";
+import { Button } from "@elements/ui/button";
+import { Alert } from "@elements/ui/alert";
+import { Card, CardHeader, CardTitle, CardContent } from "@elements/ui/card";
+import { Field } from "@elements/ui/field";
+import { Input } from "@elements/ui/input";
+import { NumberInput } from "@elements/ui/number-input";
 
 /** @rpc */
 export async function buy(form: OrderForm): Promise<string> {
@@ -33,10 +39,14 @@ export function ticketCount(form: BuyForm): number {
   return Object.values(form.quantities).reduce((sum, n) => sum + n, 0);
 }
 
-function onStep(form: BuyForm, t: TicketType, by: number) {
+function most(form: BuyForm, t: TicketType): number {
   let current = form.quantities[t.id] ?? 0;
-  let room = MAX_PER_ORDER - ticketCount(form) + current;
-  form.quantities[t.id] = Math.max(0, Math.min(current + by, remaining(t), room));
+
+  return Math.min(remaining(t), MAX_PER_ORDER - ticketCount(form) + current);
+}
+
+function onQuantity(form: BuyForm, t: TicketType, value: number | null) {
+  form.quantities[t.id] = Math.max(0, Math.min(value ?? 0, most(form, t)));
   form.errors = {};
 }
 
@@ -93,16 +103,17 @@ async function onSubmit(form: BuyForm) {
 
           <p e:if={show.description}>{show.description}</p>
 
-          <div e:if={canceled} class="callout is-warning">
-            <div class="callout-body">Checkout canceled. Nothing was charged, and your tickets went back on sale.</div>
-          </div>
+          <Alert e:if={canceled}
+                 variant="warning"
+                 role="status"
+                 description="Checkout canceled. Nothing was charged, and your tickets went back on sale." />
 
-          <form class="card buy" onsubmit={() => onSubmit(form)}>
-            <div class="card-head">
-              <h2>Tickets</h2>
-            </div>
+          <form class="buy" onsubmit={() => onSubmit(form)}>
+            <Card>
+              <CardHeader>
+                <CardTitle level={2}>Tickets</CardTitle>
+              </CardHeader>
 
-            <div class="card-body">
               <div e:for={t of types.sort((a, b) => a.position - b.position)} class="tier">
                 <div class="stack is-xs">
                   <span class="tier-name">{t.name}</span>
@@ -112,63 +123,49 @@ async function onSubmit(form: BuyForm) {
                   </span>
                 </div>
 
-                <div class="stepper row">
-                  <button type="button"
-                          aria-label={`One fewer ${t.name}`}
-                          disabled={(form.quantities[t.id] ?? 0) === 0}
-                          onclick={() => onStep(form, t, -1)}>−</button>
-                  <output aria-live="polite">{form.quantities[t.id] ?? 0}</output>
-                  <button type="button"
-                          aria-label={`One more ${t.name}`}
-                          disabled={(form.quantities[t.id] ?? 0) >= remaining(t) || ticketCount(form) >= MAX_PER_ORDER}
-                          onclick={() => onStep(form, t, 1)}>+</button>
-                </div>
+                <NumberInput class="stepper"
+                             value={form.quantities[t.id] ?? 0}
+                             min={0}
+                             max={most(form, t)}
+                             incrementLabel={`One more ${t.name}`}
+                             decrementLabel={`One fewer ${t.name}`}
+                             attrs={{ "aria-label": `${t.name} tickets` }}
+                             onValueChange={(v) => onQuantity(form, t, v)} />
               </div>
 
-              <div class="buyer stack">
-                <p e:if={form.errors.quantities} class="error" role="alert">{form.errors.quantities?.[0]}</p>
+              <CardContent class="buyer stack">
+                <Alert e:if={form.errors.quantities} variant="danger" description={form.errors.quantities?.[0] ?? ""} />
 
-                <div class="field">
-                  <label for="name">Name for the door</label>
-                  <input id="name"
-                         name="name"
-                         value={form.name}
-                         autocomplete="name"
-                         class={[form.errors.name && "is-error"]}
-                         placeholder="Ada Lovelace">
-                  <p e:if={form.errors.name} class="error">{form.errors.name?.[0]}</p>
-                </div>
+                <Field label="Name for the door" name="name" error={form.errors.name?.[0] ?? ""}>
+                  <Input value={form.name} placeholder="Ada Lovelace" attrs={{ id: "name", autocomplete: "name" }} />
+                </Field>
 
-                <div class="field">
-                  <label for="email">Email for your tickets</label>
-                  <input id="email"
-                         name="email"
-                         type="email"
+                <Field label="Email for your tickets" name="email" error={form.errors.email?.[0] ?? ""}>
+                  <Input type="email"
                          value={form.email}
-                         autocomplete="email"
-                         autocapitalize="none"
-                         spellcheck={false}
-                         class={[form.errors.email && "is-error"]}
-                         placeholder="ada@example.com">
-                  <p e:if={form.errors.email} class="error">{form.errors.email?.[0]}</p>
-                </div>
+                         placeholder="ada@example.com"
+                         attrs={{ id: "email", autocomplete: "email", autocapitalize: "none", spellcheck: "false" }} />
+                </Field>
 
                 <div class="total row">
                   <span>Total</span>
                   <strong>{money(totalCents(form, types))}</strong>
                 </div>
 
-                <p e:if={form.message} class="error" role="alert">{form.message}</p>
+                <Alert e:if={form.message} variant="danger" description={form.message} />
 
-                <button type="submit"
-                        class={["is-primary is-lg is-block", form.busy && "is-loading"]}
-                        disabled={form.busy || ticketCount(form) === 0}>
+                <Button type="submit"
+                        variant="primary"
+                        size="lg"
+                        block
+                        loading={form.busy}
+                        disabled={ticketCount(form) === 0}>
                   {ticketCount(form) === 0 ? "Choose tickets" : `Pay ${money(totalCents(form, types))}`}
-                </button>
+                </Button>
 
                 <p class="hint">Card payment by Stripe. No account needed: your tickets arrive by email, one QR code per ticket.</p>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </form>
         </div>
       </div>
