@@ -16,8 +16,6 @@
     --accent-soft: var(--brand-50);
     --accent-ink: var(--white);
     --accent-edge: var(--brand-200);
-    --link-c: 0.17;
-    --link-h: 32;
   }
 
   @media (prefers-color-scheme: dark) {
