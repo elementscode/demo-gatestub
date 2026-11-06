@@ -2,6 +2,7 @@ import "./style.css";
 import config from "#config";
 import { redirect, session } from "@elements/app";
 import { signout } from "#app/shared/services/auth";
+import { Button } from "@elements/ui/button";
 
 function onSignout() {
   signout();
@@ -25,7 +26,7 @@ function onSignout() {
           <a href="/" class={[section === "public" && "is-active", session.isLoggedIn() && "is-staff"]}>Shows</a>
           <a e:if={session.isLoggedIn()} href="/door" class={[section === "door" && "is-active"]}>Door</a>
           <a e:if={session.get("role") === "admin"} href="/admin" class={[section === "admin" && "is-active"]}>Admin</a>
-          <button e:if={session.isLoggedIn()} class="is-ghost is-sm" onclick={() => onSignout()}>Sign out</button>
+          <Button e:if={session.isLoggedIn()} variant="link" size="sm" class="site-signout" onclick={() => onSignout()}>Sign out</Button>
           <a e:else href="/signin">Staff</a>
         </nav>
       </div>

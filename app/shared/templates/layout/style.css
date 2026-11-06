@@ -31,6 +31,10 @@
   font-size: var(--text-sm);
 }
 
+.site-nav .site-signout {
+  color: var(--ink-soft);
+}
+
 .site-nav a:hover,
 .site-nav a.is-active {
   color: var(--ink);

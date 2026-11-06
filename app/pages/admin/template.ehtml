@@ -5,6 +5,10 @@ import { LiveView } from "@elements/app";
 import { Layout } from "#app/shared/templates/layout";
 import { Show, TicketType, posterUrl, typesFor, sales } from "#app/shared/services/shows";
 import { money, day, when, time } from "#app/shared/format";
+import { Button } from "@elements/ui/button";
+import { Card, CardHeader, CardTitle } from "@elements/ui/card";
+import { Table, TableHead, TableCell } from "@elements/ui/table";
+import { Progress } from "@elements/ui/progress";
 
 export interface PastShow {
   id: string;
@@ -14,10 +18,6 @@ export interface PastShow {
   capacity: number;
   checkedIn: number;
   revenue: number;
-}
-
-function pct(n: number, of: number): string {
-  return `${of === 0 ? 0 : Math.round((n / of) * 100)}%`;
 }
 
 <html lang="en" class="page-admin" (shows: Show[], types: LiveView<TicketType>, past: PastShow[])>
@@ -34,7 +34,7 @@ function pct(n: number, of: number): string {
             <h1>Sales</h1>
           </div>
           <div class="cluster">
-            <a href="/admin/shows/new" class="button is-primary">New show</a>
+            <Button href="/admin/shows/new" variant="primary">New show</Button>
           </div>
         </div>
 
@@ -56,70 +56,74 @@ function pct(n: number, of: number): string {
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-head">
-            <h2>Upcoming shows</h2>
-          </div>
-          <div class="table-wrap">
+        <Card>
+          <CardHeader>
+            <CardTitle level={2}>Upcoming shows</CardTitle>
+          </CardHeader>
+          <Table label="Upcoming shows">
             <table>
               <thead>
                 <tr>
-                  <th>Show</th>
-                  <th>Date</th>
-                  <th class="num">Sold</th>
-                  <th></th>
-                  <th class="num">Revenue</th>
-                  <th class="num">Checked in</th>
+                  <TableHead>Show</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead align="end">Sold</TableHead>
+                  <TableHead></TableHead>
+                  <TableHead align="end">Revenue</TableHead>
+                  <TableHead align="end">Checked in</TableHead>
                 </tr>
               </thead>
               <tbody>
                 <tr e:for={show of shows}>
-                  <td class="show-cell">
+                  <TableCell class="show-cell">
                     <a href={`/admin/shows/${show.id}`} class="row">
                       <img class="thumb" src={posterUrl(show)} alt="" width="40" height="60">
                       <span>{show.title}</span>
                     </a>
-                  </td>
-                  <td>{when(show.startsAt)}</td>
-                  <td class="num">{sales(typesFor(types, show.id)).sold} / {sales(typesFor(types, show.id)).capacity}</td>
-                  <td>
-                    <div class="meter-bar"><span style={`width: ${pct(sales(typesFor(types, show.id)).sold, sales(typesFor(types, show.id)).capacity)}`}></span></div>
-                  </td>
-                  <td class="num">{money(sales(typesFor(types, show.id)).revenue)}</td>
-                  <td class="num">{sales(typesFor(types, show.id)).checkedIn}</td>
+                  </TableCell>
+                  <TableCell>{when(show.startsAt)}</TableCell>
+                  <TableCell align="end">{sales(typesFor(types, show.id)).sold} / {sales(typesFor(types, show.id)).capacity}</TableCell>
+                  <TableCell>
+                    <Progress class="sold-meter"
+                              size="sm"
+                              value={sales(typesFor(types, show.id)).sold}
+                              max={sales(typesFor(types, show.id)).capacity}
+                              attrs={{ "aria-label": `${show.title} sold` }} />
+                  </TableCell>
+                  <TableCell align="end">{money(sales(typesFor(types, show.id)).revenue)}</TableCell>
+                  <TableCell align="end">{sales(typesFor(types, show.id)).checkedIn}</TableCell>
                 </tr>
               </tbody>
             </table>
-          </div>
-        </div>
+          </Table>
+        </Card>
 
-        <div e:if={past.length > 0} class="card">
-          <div class="card-head">
-            <h2>Past shows</h2>
-          </div>
-          <div class="table-wrap">
+        <Card e:if={past.length > 0}>
+          <CardHeader>
+            <CardTitle level={2}>Past shows</CardTitle>
+          </CardHeader>
+          <Table label="Past shows">
             <table>
               <thead>
                 <tr>
-                  <th>Show</th>
-                  <th>Date</th>
-                  <th class="num">Sold</th>
-                  <th class="num">Revenue</th>
-                  <th class="num">Attended</th>
+                  <TableHead>Show</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead align="end">Sold</TableHead>
+                  <TableHead align="end">Revenue</TableHead>
+                  <TableHead align="end">Attended</TableHead>
                 </tr>
               </thead>
               <tbody>
                 <tr e:for={p of past}>
-                  <td><a href={`/admin/shows/${p.id}`}>{p.title}</a></td>
-                  <td>{day(p.startsAt)}</td>
-                  <td class="num">{p.sold} / {p.capacity}</td>
-                  <td class="num">{money(p.revenue)}</td>
-                  <td class="num">{p.checkedIn}</td>
+                  <TableCell><a href={`/admin/shows/${p.id}`}>{p.title}</a></TableCell>
+                  <TableCell>{day(p.startsAt)}</TableCell>
+                  <TableCell align="end">{p.sold} / {p.capacity}</TableCell>
+                  <TableCell align="end">{money(p.revenue)}</TableCell>
+                  <TableCell align="end">{p.checkedIn}</TableCell>
                 </tr>
               </tbody>
             </table>
-          </div>
-        </div>
+          </Table>
+        </Card>
       </div>
     </Layout>
   </body>

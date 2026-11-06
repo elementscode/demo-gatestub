@@ -43,30 +43,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.table-wrap {
-  overflow-x: auto;
-}
-
-.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.meter-bar {
-  width: 6rem;
-  height: 0.4rem;
-  border-radius: var(--radius-full);
-  background: var(--bg-muted);
-  overflow: hidden;
-}
-
-.meter-bar span {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-}
-
 .thumb {
   width: 2.5rem;
   height: 3.75rem;
@@ -75,23 +51,17 @@
   flex: none;
 }
 
-td.show-cell a {
+.sold-meter {
+  width: 6rem;
+}
+
+.show-cell a {
   gap: var(--space-3);
   color: var(--ink);
   text-decoration: none;
   font-weight: var(--weight-semibold);
 }
 
-td.show-cell a:hover span {
+.show-cell a:hover span {
   text-decoration: underline;
-}
-
-.table-wrap td {
-  vertical-align: middle;
-}
-
-.num input {
-  display: block;
-  margin-left: auto;
-  text-align: right;
 }
